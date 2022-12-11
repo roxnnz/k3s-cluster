@@ -60,11 +60,8 @@ Nginx server running website. This stack contains deployment and service, ingres
 
 1. Run: 'kubectl apply -f deployments/nginx.yaml`
 
-## additional information
-1. Some k3s file locations: 
-   - k3s config file: "/etc/rancher/k3s/config.yaml"
-   - Kube access: "/etc/rancher/k3s/k3s.yaml"
-   - Registries: "/etc/rancher/k3s/registries.yaml"
+## Config private registry
+Registries: "/etc/rancher/k3s/registries.yaml" create file and use below config for registry access with auth. Restart k3s requires after mirror config changes. Run `systemctl restart k3s`
 
 e.g mirror container registries
 ```
@@ -78,7 +75,9 @@ configs:
       username: xxxxx # this is the registry username
       password: xxxxx # this is the registry password
 ```
-
+## Some other k3s file locations: 
+   - k3s config file: "/etc/rancher/k3s/config.yaml"
+   - Kube access: "/etc/rancher/k3s/k3s.yaml"
 ## clean up
 Run `/usr/local/bin/k3s-uninstall.sh` to delete k3s.
 
