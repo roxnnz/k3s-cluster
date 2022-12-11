@@ -9,7 +9,7 @@ The public ip of the network is "xxx.xxx.xxx.xxx" and issued by the internet pro
 
 - Ubuntu server
 - Docker installed
-- uwf diabled (by default)
+- uwf in-active (by default)
 
 ## pre-installation check
 
