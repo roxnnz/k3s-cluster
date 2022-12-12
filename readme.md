@@ -62,6 +62,8 @@ Go to node-server folder and build a node web api and push the image
 
 ## Example Deployments
 
+The node.yaml definition file includes some sample values for configuring cert-manager. To use cert-manager with your own settings, you will need to replace these sample values with real values that are appropriate for your environment. This will ensure that cert-manager is properly configured and can communicate with the certificate authorities and other components of your Kubernetes cluster.
+
 Node servers runing web api. this stack contains deployment and service, ingress for deploy a node web api using kubernetes.
 Run: `kubectl apply -f deployments/node.yaml`
 
@@ -100,3 +102,79 @@ Run `/usr/local/bin/k3s-uninstall.sh` to delete k3s.
 
 - `kubectl get events --sort-by='.metadata.creationTimestamp' -A -w`
 - `kubectl get service`
+
+## Cert-manager
+
+Cert-manager is a Kubernetes controller that helps manage TLS certificates in a cluster. It can automatically provision and renew certificates from various certificate authorities, including Let's Encrypt, and integrates with ingress controllers to provide automatic TLS termination. This makes it easier to secure the traffic to your applications running on Kubernetes.
+
+Waht is CRD?
+In Kubernetes, a Custom Resource Definition (CRD) is a way to extend the Kubernetes API to create custom resources that can be used in your Kubernetes cluster. CRDs allow you to define new API objects that can be used in the same way as built-in Kubernetes objects, such as pods and deployments. This enables you to add new functionality to Kubernetes without having to modify the core Kubernetes code. For example, you could use CRDs to define a new type of resource called a "foo" that represents some custom functionality that your applications need. Then you could use the Kubernetes API to create, manage, and delete "foo" resources in your cluster.
+
+To install cert-manager and config tls:
+
+1. Add cert-manager helm chart and update
+2. Install cert-manager CRDs (Custom Resource Definition) by running kubectl apply `kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.10.1/cert-manager.crds.yaml`
+3. Create namespace for cert-manager by `kubectl create namespace cert-manager`
+4. helm install cert-manager `helm install cert-manager --namespace cert-manager --version v1.10.1 jetstack/cert-manager`
+5. Check cert-manager installed correctly
+6. Under cert-manager namespace, install TLS issuers for prod by run: `kubectl apply -f issuer.yaml`. Need to create issuer.yaml file like below: (also recommand to install dev issuer for testing)
+   - e.g
+     ```
+     apiVersion: cert-manager.io/v1
+     kind: Issuer
+     metadata:
+     name: letsencrypt-prod
+     spec:
+     acme:
+        # The ACME server URL
+        server: https://acme-v02.api.letsencrypt.org/directory
+        # Email address used for ACME registration
+        email: xxxxxxxxxx@gmail.com
+        # Name of a secret used to store the ACME account private key
+        privateKeySecretRef:
+        name: letsencrypt-prod
+        # Enable the HTTP-01 challenge provider
+        solvers:
+        - http01:
+           ingress:
+              class: traefik
+     ```
+   - It is also recommended to install the dev issuer for testing purposes. This will allow you to easily test and debug your TLS certificates in a development environment without having to use a real certificate authority.
+7. Check if issuer has been installed correctly
+8. Add configs in ingress defination file for:
+   - add annotaion: `cert-manager.io/issuer: "letsencrypt-prod"`
+   - add tls describetions under spec:
+     e.g
+     ```
+     spec:
+        tls:
+        - hosts:
+              - example.domain.com
+           secretName: node-service-tls
+        rules: ...
+     ```
+   - Note that the name of the certificate in the Secret resource created by cert-manager will be the same as the secretName defined in your certificate definition. This is the name that you will use to reference the certificate in your ingress resource or other components of your Kubernetes application.
+9. A pod will be started at the this namespace, it's for checking webhook call for acma check. after check finished cert in ready status:
+
+```
+$ kubectl get certificate -n ng
+NAME READY SECRET AGE
+node-service-tls False node-service-tls 26s
+
+$ kubectl get certificate -n bookings
+NAME READY SECRET AGE
+node-service-tls False node-service-tls 27s
+
+$ kubectl get certificate -n bookings
+NAME READY SECRET AGE
+node-service-tls True node-service-tls 28s
+
+$ kubectl get certificate -n bookings
+NAME READY SECRET AGE
+node-service-tls True node-service-tls 29s
+```
+
+10. some useful links:
+
+- https://cert-manager.io/docs/installation/helm/
+- https://cert-manager.io/docs/tutorials/acme/nginx-ingress/

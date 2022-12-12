@@ -4,6 +4,22 @@ kind: Namespace
 metadata:
   name: ng
 ---
+apiVersion: cert-manager.io/v1
+kind: Issuer  # Added for cert-manager
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    # replace with correct email address
+    email: xxxxxxx@gmail.com 
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+    - http01:
+        ingress:
+          class: traefik
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -11,13 +27,17 @@ metadata:
   name: nginx-ingress
   annotations:
     kubernetes.io/ingress.class: "traefik"
-    # traefik.ingress.kubernetes.io/router.entrypoints: web, websecure
+    cert-manager.io/issuer: "letsencrypt-prod" # Added for cert-manager
 spec:
   defaultBackend:
     service:
       name: node-service
       port:
         number: 80
+  tls:
+  - hosts:
+      - example.domain.com # Replace with correct domain name
+    secretName: node-service-tls
   rules:
     - http:
         paths:
